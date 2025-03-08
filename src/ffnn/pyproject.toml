@@ -1,0 +1,13 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "ffnn"
+version = "0.0.1"
+authors = [
+  { name="Ahmad Naufal Ramadan", email="13522005@std.stei.itb.ac.id" },
+  { name="Yusuf Ardian Sandi", email="13522015@std.stei.itb.ac.id" },
+  { name="Rayendra Althaf Taraka Noor", email="13522107@std.stei.itb.ac.id" },
+]
+description = "FFNN Helper Library"
