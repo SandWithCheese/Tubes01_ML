@@ -2,3 +2,4 @@ __pycache__
 .vscode
 .venv
 dist
+src/notebooks/develop/data
