@@ -17,53 +17,53 @@ class Activation:
             return Activation.Softmax()
 
     class Linear:
-        def activate(z):
+        def activate(self, z):
             return z
 
-        def derivative(z):
+        def derivative(self, z):
             return 1
 
-        def get_activation_type():
+        def get_activation_type(self):
             return ActivationFunction.LINEAR
 
     class ReLU:
-        def activate(z):
+        def activate(self, z):
             return np.maximum(0, z)
 
-        def derivative(z):
+        def derivative(self, z):
             return np.where(z > 0, 1, 0)
 
-        def get_activation_type():
+        def get_activation_type(self):
             return ActivationFunction.RELU
 
     class Sigmoid:
-        def activate(z):
+        def activate(self, z):
             return 1 / (1 + np.exp(-z))
 
-        def derivative(z):
+        def derivative(self, z):
             a = 1 / (1 + np.exp(-z))
             return a * (1 - a)
 
-        def get_activation_type():
+        def get_activation_type(self):
             return ActivationFunction.SIGMOID
 
     class TanH:
-        def activate(z):
+        def activate(self, z):
             return np.tanh(z)
 
-        def derivative(z):
+        def derivative(self, z):
             a = np.tanh(z)
             return 1 - np.square(a)
 
-        def get_activation_type():
+        def get_activation_type(self):
             return ActivationFunction.TANH
 
     class Softmax:
-        def activate(z):
+        def activate(self, z):
             exp_z = np.exp(z)
             return exp_z / np.sum(exp_z, axis=1, keepdims=True)
 
-        def derivative(z):
+        def derivative(self, z):
             exp_z = np.exp(z)
             softmax = exp_z / np.sum(exp_z, axis=1, keepdims=True)
             # jacobian = np.diag(softmax) - np.outer(softmax, softmax)
@@ -71,5 +71,5 @@ class Activation:
             # TODO: Gatau bener atau ga lol
             return softmax * (1 - softmax)
 
-        def get_activation_type():
+        def get_activation_type(self):
             return ActivationFunction.SOFTMAX
