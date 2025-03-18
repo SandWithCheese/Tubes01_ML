@@ -21,6 +21,8 @@ class WeightInitializer(Enum):
     ZERO = 1
     UNIFORM = 2
     NORMAL = 3
+    XAVIER = 4
+    HE = 5
 
 
 @dataclass
@@ -52,5 +54,21 @@ class WeightsSetup:
                 raise ValueError(
                     "mean and variance are required for NORMAL initializer"
                 )
+        elif self.initializer == WeightInitializer.XAVIER:
+            if self.lower_bound is not None or self.upper_bound is not None:
+                raise ValueError(
+                    "lower_bound and upper_bound should be None for XAVIER initializer"
+                )
+            if self.mean is not None or self.variance is not None:
+                raise ValueError(
+                    "mean and variance should be None for XAVIER initializer"
+                )
+        elif self.initializer == WeightInitializer.HE:
+            if self.lower_bound is not None or self.upper_bound is not None:
+                raise ValueError(
+                    "lower_bound and upper_bound should be None for HE initializer"
+                )
+            if self.mean is not None or self.variance is not None:
+                raise ValueError("mean and variance should be None for HE initializer")
         else:
             raise ValueError(f"Unsupported initializer: {self.initializer}")
