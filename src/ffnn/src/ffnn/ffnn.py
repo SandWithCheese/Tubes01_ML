@@ -99,8 +99,19 @@ class FFNN:
     def forward(self, X):
         pass
 
+    # backward propragation for single instance
     def backward(self, X, y):
-        pass
+        # calculate current result
+        output = self.forward(X)
 
-    def update(self):
-        pass
+        # calculate dloss/do
+        loss_over_outputs = self.loss_function.derivative(y, output)
+
+        # update output layer
+        current_layer_grad, bias_grad = self.layers[len(self.layers)-1].get_gradient(True, loss_over_outputs)
+
+        # update hidden layer
+        self.layers[len(self.layers)-1].update_layer(current_layer_grad, bias_grad, self.learning_rate)
+        for i in range(len(self.layers)-2,0):
+            current_layer_grad, bias_grad = self.layers[i].get_gradient(False, older_layer_grad=current_layer_grad)
+            self.layers[i].update_layer(current_layer_grad, bias_grad, self.learning_rate)
