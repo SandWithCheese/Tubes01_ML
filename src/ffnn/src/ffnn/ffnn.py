@@ -2,6 +2,7 @@ from ffnn.layer import Layer
 from ffnn.types import ActivationFunction, LossFunction, WeightsSetup, WeightInitializer
 from ffnn.loss import Loss
 from random import randint
+import numpy as np
 
 
 class FFNN:
@@ -97,21 +98,44 @@ class FFNN:
         pass
 
     def forward(self, X):
-        pass
+        return X
+    
+    def fit(self, X, Y):
+        for i in range(self.epochs):
+            self.backward(X, Y)
 
-    # backward propragation for single instance
-    def backward(self, X, y):
-        # calculate current result
-        output = self.forward(X)
 
-        # calculate dloss/do
-        loss_over_outputs = self.loss_function.derivative(y, output)
+    def backward(self, X, Y):
+        layer_grad = []
+        bias_grad = []
 
-        # update output layer
-        current_layer_grad, bias_grad = self.layers[len(self.layers)-1].get_gradient(True, loss_over_outputs)
+        for i, x in enumerate(X):
+            current_layer_grad = [[] for i in range(len(self.layers))]
+            current_bias_grad = [[] for i in range(len(self.layers))]
 
-        # update hidden layer
-        self.layers[len(self.layers)-1].update_layer(current_layer_grad, bias_grad, self.learning_rate)
-        for i in range(len(self.layers)-2,0):
-            current_layer_grad, bias_grad = self.layers[i].get_gradient(False, older_layer_grad=current_layer_grad)
-            self.layers[i].update_layer(current_layer_grad, bias_grad, self.learning_rate)
+            output = self.forward(x)
+
+            # calculate dloss/do
+            loss_over_outputs = self.loss_function.derivative(Y[i], output)
+
+            # get output layer grad
+            current_layer_grad[len(self.layers)-1], current_bias_grad[len(self.layers)-1] = self.layers[len(self.layers)-1].get_gradient(True, loss_over_outputs)
+
+            # update hidden layer grad
+            for i in range(len(self.layers)-2,0, -1):
+                current_layer_grad[i], current_bias_grad[i] = self.layers[i].get_gradient(False, older_layer_grad=current_layer_grad[i+1])
+
+            if i == 0:
+                layer_grad = current_layer_grad
+                bias_grad = current_bias_grad
+                
+            else:
+                layer_grad = np.add(layer_grad, current_layer_grad)
+                bias_grad = np.add(bias_grad, current_bias_grad)
+        
+        # update in the end of the batch
+        layer_grad = [[[element/len(X) for element in d1] for d1 in d2] for d2 in layer_grad]
+        bias_grad /= [[[element/len(X) for element in d1] for d1 in d2] for d2 in bias_grad]
+
+        for i, layer in enumerate (self.layers):
+            layer.update_weight(layer_grad[i], bias_grad[i], self.learning_rate)
