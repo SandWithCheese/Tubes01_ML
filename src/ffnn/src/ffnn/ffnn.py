@@ -96,8 +96,30 @@ class FFNN:
     def load_model(self, path: str):
         pass
 
-    def forward(self, X):
-        pass
+    def forward(self, X): # Bro dokumentasi lah bro
+        """
+        Perform forward propagation through the neural network.
+        
+        Args:
+            X (numpy.ndarray): Input data
+
+        Returns:
+            numpy.ndarray: Output of the final layer
+        """
+        # Current input is the input data
+        current_input = X
+
+        # Iterate through each layer and apply transformations
+        for layer in self.layers:
+            # Compute the pre-activation (z) values (atau kalo di slide disebut net)
+            # z = weights * input + bias
+            z = layer.weights @ current_input
+            
+            # Apply activation function to get layer's output
+            current_input = layer.activation.activate(z)
+
+        # Return the output of the final layer
+        return current_input
 
     # backward propragation for single instance
     def backward(self, X, y):
