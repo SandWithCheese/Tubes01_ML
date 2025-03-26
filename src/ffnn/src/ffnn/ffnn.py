@@ -3,6 +3,7 @@ from ffnn.types import ActivationFunction, LossFunction, WeightsSetup, WeightIni
 from ffnn.loss import Loss
 from random import randint
 import numpy as np
+import pickle
 
 
 class FFNN:
@@ -92,10 +93,10 @@ class FFNN:
         pass
 
     def save_model(self, path: str):
-        pass
+        pickle.dump(self, open(path, 'wb'))
 
     def load_model(self, path: str):
-        pass
+        return pickle.load(open(path, 'rb'))
 
     def forward(self, X):
         return X
