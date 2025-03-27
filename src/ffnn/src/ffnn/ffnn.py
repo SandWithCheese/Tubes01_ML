@@ -4,6 +4,8 @@ from ffnn.loss import Loss
 from random import randint
 import numpy as np
 import pickle
+import seaborn as sns
+import matplotlib.pyplot as plt
 
 
 class FFNN:
@@ -70,6 +72,8 @@ class FFNN:
         self.epochs = epochs
         self.verbose = verbose
         self.random_state = random_state
+        self.layers_gradient = []
+        self.bias_gradient = []
 
         print("FFNN initialized")
         print("Layer sizes:", layer_sizes)
@@ -87,10 +91,42 @@ class FFNN:
         pass
 
     def plot_weights(self, layers: list[int]):
-        pass
+        for layer_number in layers:
+            data = self.layers[layer_number].weights[:, :-1].flatten()
+            bias_data = self.layers[layer_number].weights[:, -1].flatten()
+
+            plt.figure(figsize=(8, 6))
+            sns.histplot(data, bins=10, kde=True)
+            plt.xlabel("Weight value")
+            plt.ylabel("Frequency")
+            plt.title(f"Distribution of weights in the {layer_number}-th layer")
+            plt.show()
+
+            plt.figure(figsize=(8, 6))
+            sns.histplot(bias_data, bins=10, kde=True, color="red")
+            plt.xlabel("Bias value")
+            plt.ylabel("Frequency")
+            plt.title(f"Distribution of biases in the {layer_number}-th layer")
+            plt.show()
 
     def plot_gradients(self, layers: list[int]):
-        pass
+        for layer_number in layers:
+
+            data = self.layers_gradient[layer_number].weights.flatten()
+            plt.figure(figsize=(8, 6))
+            sns.histplot(data, bins=10, kde=True)
+            plt.xlabel("Weight gradient")
+            plt.ylabel("Frequency")
+            plt.title(f"Distribution of weights gradients in the {layer_number}-th layer")
+            plt.show()
+
+            data = self.bias_gradient[layer_number].weights.flatten()
+            plt.figure(figsize=(8, 6))
+            sns.histplot(data, bins=10, kde=True, color="red")
+            plt.xlabel("Bias gradient")
+            plt.ylabel("Frequency")
+            plt.title(f"Distribution of bias gradients in the {layer_number}-th layer")
+            plt.show()
 
     def save_model(self, path: str):
         pickle.dump(self, open(path, 'wb'))
@@ -123,7 +159,7 @@ class FFNN:
             current_layer_grad[len(self.layers)-1], current_bias_grad[len(self.layers)-1] = self.layers[len(self.layers)-1].get_gradient(True, loss_over_outputs)
 
             # update hidden layer grad
-            for i in range(len(self.layers)-2,0, -1):
+            for i in range(len(self.layers)-2,-1, -1):
                 current_layer_grad[i], current_bias_grad[i] = self.layers[i].get_gradient(False, older_layer_grad=current_layer_grad[i+1])
 
             if i == 0:
@@ -135,8 +171,7 @@ class FFNN:
                 bias_grad = np.add(bias_grad, current_bias_grad)
         
         # update in the end of the batch
-        layer_grad = [[[element/len(X) for element in d1] for d1 in d2] for d2 in layer_grad]
-        bias_grad /= [[[element/len(X) for element in d1] for d1 in d2] for d2 in bias_grad]
-
+        self.layers_gradient = layer_grad = [[[element/len(X) for element in d1] for d1 in d2] for d2 in layer_grad]
+        self.bias_gradient = bias_grad = [[[element/len(X) for element in d1] for d1 in d2] for d2 in bias_grad]
         for i, layer in enumerate (self.layers):
             layer.update_weight(layer_grad[i], bias_grad[i], self.learning_rate)
