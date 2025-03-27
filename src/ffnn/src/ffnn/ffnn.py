@@ -93,50 +93,102 @@ class FFNN:
         pass
 
     def save_model(self, path: str):
-        pickle.dump(self, open(path, 'wb'))
+        pickle.dump(self, open(path, "wb"))
 
     def load_model(self, path: str):
-        return pickle.load(open(path, 'rb'))
+        return pickle.load(open(path, "rb"))
 
     def forward(self, X):
-        return X
-    
+        current_input = X
+        for layer in self.layers:
+            # Add bias term (1) to input
+            if len(current_input.shape) == 1:
+                current_input = np.append(current_input, 1)
+            else:
+                current_input = np.hstack(
+                    [current_input, np.ones((current_input.shape[0], 1))]
+                )
+
+            # Store input to layer
+            layer.input_value = current_input
+
+            # Calculate output
+            z = np.dot(current_input, layer.weights)
+
+            # Store net from layer
+            layer.output_value = z
+
+            current_input = layer.activation.activate(z)
+
+        return current_input
+
     def fit(self, X, Y):
         for i in range(self.epochs):
+            print(f"Epoch {i+1}/{self.epochs}")
             self.backward(X, Y)
+            print(f"Loss: {self.loss_function.calculate(Y, self.predict(X))}")
 
+    def print_weights(self):
+        for i, layer in enumerate(self.layers):
+            print(f"Layer {i+1} weights:")
+            print(layer.weights)
+            print()
+
+    def predict(self, X):
+        return np.array([self.forward(x) for x in X])
+
+    def set_weights(self, weights: list[np.ndarray]):
+        for i, layer in enumerate(self.layers):
+            layer.weights = weights[i]
 
     def backward(self, X, Y):
-        layer_grad = []
-        bias_grad = []
+        layer_grad = [
+            np.zeros((layer.output_size, layer.input_size)) for layer in self.layers
+        ]
+        bias_grad = [np.zeros(layer.output_size) for layer in self.layers]
 
-        for i, x in enumerate(X):
-            current_layer_grad = [[] for i in range(len(self.layers))]
-            current_bias_grad = [[] for i in range(len(self.layers))]
+        for x, y in zip(X, Y):
+            # Forward pass
+            output = (
+                self.forward(x.reshape(1, -1)) if len(x.shape) == 1 else self.forward(x)
+            )
 
-            output = self.forward(x)
+            # Calculate dloss/do
+            loss_over_outputs = self.loss_function.derivative(y, output.flatten())
 
-            # calculate dloss/do
-            loss_over_outputs = self.loss_function.derivative(Y[i], output)
+            # Backward pass
+            current_layer_grad = []
+            current_bias_grad = []
 
-            # get output layer grad
-            current_layer_grad[len(self.layers)-1], current_bias_grad[len(self.layers)-1] = self.layers[len(self.layers)-1].get_gradient(True, loss_over_outputs)
+            # Output layer
+            grad, bias = self.layers[-1].get_gradient(True, loss_over_outputs)
+            current_layer_grad.append(grad)
+            current_bias_grad.append(bias)
 
-            # update hidden layer grad
-            for i in range(len(self.layers)-2,0, -1):
-                current_layer_grad[i], current_bias_grad[i] = self.layers[i].get_gradient(False, older_layer_grad=current_layer_grad[i+1])
+            # Hidden layers
+            for i in range(len(self.layers) - 2, -1, -1):
+                grad, bias = self.layers[i].get_gradient(
+                    False,
+                    older_layer_grad=current_layer_grad[0],
+                    older_layer_weights=self.layers[i + 1].weights,
+                )
+                current_layer_grad.insert(0, grad)
+                current_bias_grad.insert(0, bias)
 
-            if i == 0:
-                layer_grad = current_layer_grad
-                bias_grad = current_bias_grad
-                
-            else:
-                layer_grad = np.add(layer_grad, current_layer_grad)
-                bias_grad = np.add(bias_grad, current_bias_grad)
-        
-        # update in the end of the batch
-        layer_grad = [[[element/len(X) for element in d1] for d1 in d2] for d2 in layer_grad]
-        bias_grad /= [[[element/len(X) for element in d1] for d1 in d2] for d2 in bias_grad]
+            # Accumulate gradients
+            for i in range(len(self.layers)):
+                layer_grad[i] += current_layer_grad[i]
+                bias_grad[i] += current_bias_grad[i]
 
-        for i, layer in enumerate (self.layers):
-            layer.update_weight(layer_grad[i], bias_grad[i], self.learning_rate)
+        # Average gradients
+        n_samples = len(X)
+        for i in range(len(self.layers)):
+            layer_grad[i] /= n_samples
+            bias_grad[i] /= n_samples
+
+        # Update weights
+        for i, layer in enumerate(self.layers):
+            # Update weights (excluding bias)
+            layer.weights[:-1] -= self.learning_rate * layer_grad[i].T
+            # Update bias (last row of weights)
+            layer.weights[-1] -= self.learning_rate * bias_grad[i]
