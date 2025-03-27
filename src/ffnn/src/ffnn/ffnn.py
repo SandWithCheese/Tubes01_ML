@@ -1,5 +1,6 @@
 from ffnn.layer import Layer
 from ffnn.types import ActivationFunction, LossFunction, WeightsSetup, WeightInitializer
+from ffnn.activation import Activation
 from ffnn.loss import Loss
 from random import randint
 import numpy as np
@@ -20,7 +21,7 @@ class FFNN:
         random_state: int = None,
     ):
         if activation_functions is None:
-            activation_functions = [ActivationFunction.RELU] * (len(layer_sizes - 1))
+            activation_functions = [ActivationFunction.RELU] * (len(layer_sizes) - 1)
 
         if weights_setup is None:
             weights_setup = [WeightsSetup(WeightInitializer.ZERO)] * (
@@ -82,61 +83,114 @@ class FFNN:
         print("Verbose:", verbose)
         print("Random state:", random_state)
 
-    # TODO: Implemen semua method di bawah ini
     def show_graph(self):
+        # Placeholder for visualization logic
         pass
 
     def plot_weights(self, layers: list[int]):
+        # Placeholder for weights plotting
         pass
 
     def plot_gradients(self, layers: list[int]):
+        # Placeholder for gradients plotting
         pass
 
     def save_model(self, path: str):
-        pickle.dump(self, open(path, 'wb'))
+        with open(path, "wb") as f:
+            pickle.dump(self, f)
 
-    def load_model(self, path: str):
-        return pickle.load(open(path, 'rb'))
+    @staticmethod
+    def load_model(path: str):
+        with open(path, "rb") as f:
+            return pickle.load(f)
+
+    def fit(self, X, Y):
+        np.random.seed(self.random_state)
+        for epoch in range(self.epochs):
+            indices = np.random.permutation(len(X))
+            X_shuffled = X[indices]
+            Y_shuffled = Y[indices]
+
+            for i in range(0, len(X), self.batch_size):
+                X_batch = X_shuffled[i : i + self.batch_size]
+                Y_batch = Y_shuffled[i : i + self.batch_size]
+
+                # Forward pass
+                self.forward(X_batch)
+
+                # Compute loss
+                y_pred = self.layers[-1].output_value
+                loss = self.loss_function.calculate(Y_batch, y_pred)
+
+                # Backward pass
+                self.backward(Y_batch)
+
+                if self.verbose and (i // self.batch_size) % 10 == 0:
+                    print(
+                        f"Epoch {epoch + 1}, Batch {i//self.batch_size}, Loss: {loss:.4f}"
+                    )
 
     def forward(self, X):
-        return X
-    
-    def fit(self, X, Y):
-        for i in range(self.epochs):
-            self.backward(X, Y)
+        a = X
+        for layer in self.layers:
+            layer.input_value = a
+            z = np.dot(a, layer.weights) + layer.biases
+            a = layer.activation.activate(z)
+            layer.z = z
+            layer.output_value = a
+        return a
 
+    def backward(self, Y):
+        y_pred = self.layers[-1].output_value
 
-    def backward(self, X, Y):
-        layer_grad = []
-        bias_grad = []
+        # Handle output layer gradient
+        if isinstance(self.loss_function, Loss.CategoricalCrossEntropy) and isinstance(
+            self.layers[-1].activation, Activation.Softmax
+        ):
+            delta = self.loss_function.derivative(Y, y_pred)
+        else:
+            loss_derivative = self.loss_function.derivative(Y, y_pred) / 2.0
+            activation_derivative = self.layers[-1].activation.derivative(
+                self.layers[-1].z
+            )
+            delta = loss_derivative * activation_derivative
 
-        for i, x in enumerate(X):
-            current_layer_grad = [[] for i in range(len(self.layers))]
-            current_bias_grad = [[] for i in range(len(self.layers))]
+        # Backpropagate through layers
+        for i in reversed(range(len(self.layers))):
+            layer = self.layers[i]
+            a_prev = layer.input_value
 
-            output = self.forward(x)
+            # Compute gradients
+            grad_weights = np.dot(a_prev.T, delta)
+            grad_biases = np.sum(delta, axis=0, keepdims=True)
 
-            # calculate dloss/do
-            loss_over_outputs = self.loss_function.derivative(Y[i], output)
+            # Update parameters
+            layer.old_weights = layer.weights.copy()
+            layer.weights -= self.learning_rate * grad_weights
+            layer.old_biases = layer.biases.copy()
+            layer.biases -= self.learning_rate * grad_biases
 
-            # get output layer grad
-            current_layer_grad[len(self.layers)-1], current_bias_grad[len(self.layers)-1] = self.layers[len(self.layers)-1].get_gradient(True, loss_over_outputs)
+            # Propagate delta to previous layer
+            if i > 0:
+                delta = np.dot(delta, layer.old_weights.T)
+                prev_activation_derivative = self.layers[i - 1].activation.derivative(
+                    self.layers[i - 1].z
+                )
+                delta *= prev_activation_derivative
 
-            # update hidden layer grad
-            for i in range(len(self.layers)-2,0, -1):
-                current_layer_grad[i], current_bias_grad[i] = self.layers[i].get_gradient(False, older_layer_grad=current_layer_grad[i+1])
+    def predict(self, X):
+        return self.forward(X)
 
-            if i == 0:
-                layer_grad = current_layer_grad
-                bias_grad = current_bias_grad
-                
-            else:
-                layer_grad = np.add(layer_grad, current_layer_grad)
-                bias_grad = np.add(bias_grad, current_bias_grad)
-        
-        # update in the end of the batch
-        layer_grad = [[[element/len(X) for element in d1] for d1 in d2] for d2 in layer_grad]
-        bias_grad /= [[[element/len(X) for element in d1] for d1 in d2] for d2 in bias_grad]
+    def set_weights(self, weights: list[np.ndarray]):
+        assert len(weights) == len(
+            self.layers
+        ), "Number of weights should match number of layers"
+        for i, weight in enumerate(weights):
+            self.layers[i].weights = weight
 
-        for i, layer in enumerate (self.layers):
-            layer.update_weight(layer_grad[i], bias_grad[i], self.learning_rate)
+    def set_biases(self, biases: list[np.ndarray]):
+        assert len(biases) == len(
+            self.layers
+        ), "Number of biases should match number of layers"
+        for i, bias in enumerate(biases):
+            self.layers[i].biases = np.array([bias])
