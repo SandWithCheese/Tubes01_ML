@@ -20,6 +20,8 @@ class FFNN:
         epochs: int = 100,
         verbose: bool = False,
         random_state: int = None,
+        l1_lambda: float = 0.0,
+        l2_lambda: float = 0.0,
     ):
         if activation_functions is None:
             activation_functions = [ActivationFunction.RELU] * (len(layer_sizes) - 1)
@@ -72,7 +74,8 @@ class FFNN:
         self.epochs = epochs
         self.verbose = verbose
         self.random_state = random_state
-        self.losses = []
+        self.l1_lambda = l1_lambda
+        self.l2_lambda = l2_lambda
 
         print("FFNN initialized")
         print("Layer sizes:", layer_sizes)
@@ -142,12 +145,10 @@ class FFNN:
                 # Backward pass
                 self.backward(Y_batch)
 
-                # UNCOMMENT THIS FOR DEBUGGING
-                # if self.verbose and (i // self.batch_size) % 10 == 0:
-                    # print(
-                    #     f"Epoch {epoch + 1}, Batch {i//self.batch_size}, Loss: {loss:.4f}"
-                    # )
-            self.losses.append(loss)
+                if self.verbose and (i // self.batch_size) % 10 == 0:
+                    print(
+                        f"Epoch {epoch + 1}, Batch {i//self.batch_size}, Loss: {loss}"
+                    )
 
     def forward(self, X):
         a = X
@@ -166,13 +167,17 @@ class FFNN:
         if isinstance(self.loss_function, Loss.CategoricalCrossEntropy) and isinstance(
             self.layers[-1].activation, Activation.Softmax
         ):
-            delta = self.loss_function.derivative(Y, y_pred)
+            # delta = self.loss_function.derivative(Y, y_pred)
+            delta = y_pred - Y
         else:
-            loss_derivative = self.loss_function.derivative(Y, y_pred) / 2.0
+            loss_derivative = self.loss_function.derivative(Y, y_pred)
             activation_derivative = self.layers[-1].activation.derivative(
                 self.layers[-1].z
             )
             delta = loss_derivative * activation_derivative
+
+        # Clip gradients to prevent exploding gradients
+        delta = np.clip(delta, -1, 1)
 
         # Backpropagate through layers
         for i in reversed(range(len(self.layers))):
@@ -181,7 +186,16 @@ class FFNN:
 
             # Compute gradients
             grad_weights = np.dot(a_prev.T, delta)
+            grad_weights = np.clip(grad_weights, -1, 1)
+
+            # Add L1 regularization (sign(weights))
+            grad_weights += self.l1_lambda * np.sign(layer.weights)
+
+            # Add L2 regularization (weights)
+            grad_weights += self.l2_lambda * layer.weights
+
             grad_biases = np.sum(delta, axis=0, keepdims=True)
+            grad_biases = np.clip(grad_biases, -1, 1)
 
             # Update parameters
             layer.old_weights = layer.weights.copy()
@@ -196,6 +210,7 @@ class FFNN:
                     self.layers[i - 1].z
                 )
                 delta *= prev_activation_derivative
+                delta = np.clip(delta, -1, 1)
 
     def predict(self, X):
         return self.forward(X)
