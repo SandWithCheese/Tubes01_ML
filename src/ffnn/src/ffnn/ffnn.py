@@ -8,7 +8,7 @@ import numpy as np
 import pickle
 import matplotlib.pyplot as plt
 import seaborn as sns
-
+import plotly.graph_objects as go
 
 class FFNN:
     def __init__(
@@ -82,8 +82,128 @@ class FFNN:
         self.biases_grad = []
 
     def show_graph(self):
-        # Placeholder for visualization logic
-        pass
+        '''
+        Show the graph of the neural network including bias neurons
+        '''
+        # Initialize variables
+        positions = []
+        edges = []
+        edge_labels = []
+        labels = []
+        layer_x_offset = 200
+        neuron_y_offset = 100
+        
+        # Create positions for all neurons
+        current_neuron_idx = 0
+        
+        # Input layer
+        input_size = self.layers[0].input_size
+        for j in range(input_size):
+            x = 0
+            y = (j - input_size / 2) * neuron_y_offset
+            positions.append((x, y))
+            labels.append(f'L0 N{j}')
+        # for bias neuron in input layer
+        bias_x = 0 - layer_x_offset / 2
+        bias_y = 0
+        # positions.append((bias_x, bias_y))
+        # labels.append(f'L0 Bias')        
+        
+        # Hidden and output layers
+        for i, layer in enumerate(self.layers):
+            layer_num = i + 1
+            output_size = layer.output_size
+            for j in range(output_size):
+                x = layer_num * layer_x_offset
+                y = (j - output_size / 2) * neuron_y_offset
+                positions.append((x, y))
+                labels.append(f'L{layer_num} N{j}')
+            # for bias neuron in hidden and output layers
+            bias_x = layer_num * layer_x_offset - layer_x_offset / 2
+            bias_y = 0
+            # positions.append((bias_x, bias_y))
+            # labels.append(f'L{layer_num} Bias')
+        
+        # Create edges between layers
+        for l, layer in enumerate(self.layers):
+            input_size = layer.input_size
+            output_size = layer.output_size
+            
+            # Get the starting and ending indices for this layer's neurons
+            start_idx = sum(l.input_size for l in self.layers[:l]) if l > 0 else 0
+            end_idx = start_idx + input_size
+            
+            next_start_idx = sum(l.output_size for l in self.layers[:l+1])
+            next_end_idx = next_start_idx + output_size
+            
+            # Create edges between all input and output neurons
+            for i in range(input_size):
+                for j in range(output_size):
+                    start_pos = positions[start_idx + i]
+                    end_pos = positions[next_start_idx + j]
+                    edges.append((start_pos, end_pos))
+                    
+                    # Position label at 1/4th of the edge length
+                    label_x = start_pos[0] + 0.25 * (end_pos[0] - start_pos[0])
+                    label_y = start_pos[1] + 0.25 * (end_pos[1] - start_pos[1])
+                    
+                    # Only show gradients if they exist
+                    if hasattr(self, 'weights_grad') and len(self.weights_grad) > l:
+                        grad_text = f'\n∇w={self.weights_grad[l][i, j]:.2f}' if l < len(self.weights_grad) else ''
+                    else:
+                        grad_text = ''
+                    
+                    edge_labels.append((label_x, label_y, 
+                                    f'w={layer.weights[j, i]:.2f}{grad_text}'))
+        
+        # Create edge traces
+        edge_traces = []
+        for edge in edges:
+            edge_traces.append(
+                go.Scatter(
+                    x=[edge[0][0], edge[1][0]],
+                    y=[edge[0][1], edge[1][1]],
+                    mode='lines',
+                    line=dict(width=1, color='gray')
+                )
+            )
+        
+        # Create edge label traces
+        label_traces = []
+        for label_x, label_y, text in edge_labels:
+            label_traces.append(
+                go.Scatter(
+                    x=[label_x],
+                    y=[label_y],
+                    mode='text',
+                    text=[text],
+                    textposition='middle center',
+                    textfont=dict(size=8)
+                )
+            )
+        
+        # Create node trace
+        node_trace = go.Scatter(
+            x=[p[0] for p in positions],
+            y=[p[1] for p in positions],
+            mode='markers+text',
+            marker=dict(size=15, color='lightblue', line=dict(width=2, color='darkblue')),
+            text=labels,
+            textposition='top center',
+            hoverinfo='text'
+        )
+        
+        # Create figure
+        fig = go.Figure(data=edge_traces + label_traces + [node_trace])
+        fig.update_layout(
+            title='Neural Network Architecture',
+            showlegend=False,
+            hovermode='closest',
+            margin=dict(b=20,l=5,r=5,t=40),
+            xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+            yaxis=dict(showgrid=False, zeroline=False, showticklabels=False)
+        )
+        fig.show()
 
     def plot_weights(self, layers: list[int]):
         for layer_number in layers:
