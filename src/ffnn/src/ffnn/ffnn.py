@@ -5,6 +5,7 @@ from ffnn.loss import Loss
 from random import randint
 import numpy as np
 import pickle
+import matplotlib.pyplot as plt
 
 
 class FFNN:
@@ -71,6 +72,7 @@ class FFNN:
         self.epochs = epochs
         self.verbose = verbose
         self.random_state = random_state
+        self.losses = []
 
         print("FFNN initialized")
         print("Layer sizes:", layer_sizes)
@@ -94,6 +96,21 @@ class FFNN:
     def plot_gradients(self, layers: list[int]):
         # Placeholder for gradients plotting
         pass
+    
+    def plot_loss_curve(self):
+        plt.figure(figsize=(10, 6))
+        plt.plot(self.losses, label='Training Loss')
+        plt.title('Loss Function Value over Iterations')
+        plt.xlabel('Iteration')
+        plt.ylabel('Loss')
+        # plt.yscale('log')  # Log scale to better visualize loss changes
+        max_loss = max(self.losses)
+        y_ticks = list(range(0, int(max_loss) + 3, 2))
+        plt.yticks(y_ticks)
+        plt.legend()
+        plt.grid(True, which="both", ls="-", alpha=0.5)
+        plt.tight_layout()
+        plt.show()
 
     def save_model(self, path: str):
         with open(path, "wb") as f:
@@ -125,10 +142,12 @@ class FFNN:
                 # Backward pass
                 self.backward(Y_batch)
 
-                if self.verbose and (i // self.batch_size) % 10 == 0:
-                    print(
-                        f"Epoch {epoch + 1}, Batch {i//self.batch_size}, Loss: {loss:.4f}"
-                    )
+                # UNCOMMENT THIS FOR DEBUGGING
+                # if self.verbose and (i // self.batch_size) % 10 == 0:
+                    # print(
+                    #     f"Epoch {epoch + 1}, Batch {i//self.batch_size}, Loss: {loss:.4f}"
+                    # )
+            self.losses.append(loss)
 
     def forward(self, X):
         a = X
