@@ -104,7 +104,7 @@ class FFNN:
     def plot_loss_curve(self):
         plt.figure(figsize=(10, 6))
         plt.plot(self.losses, label='Training Loss')
-        plt.title('Loss Function Value over Epochs')
+        plt.title('Loss Function Value (AVG) over Epochs')
         plt.xlabel('Epoch')
         plt.ylabel('Loss')
         # plt.yscale('log')  # Log scale to better visualize loss changes
