@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import plotly.graph_objects as go
 
+
 class FFNN:
     def __init__(
         self,
@@ -82,111 +83,113 @@ class FFNN:
         self.biases_grad = []
 
     def show_graph(self):
-        """
-        Visualize the FFNN architecture with:
-        - Each layer's neurons properly positioned
-        - Bias neurons connected to next layer's regular neurons
-        - Weight and gradient information
-        - Clean, professional visualization style
-        """
-        # Visualization parameters
         GAP_MULTIPLIER = 200  # Horizontal spacing between layers
-        NEURON_SPACING = 50   # Vertical spacing between neurons
-        BIAS_OFFSET = -50     # Horizontal offset for bias neurons
-        
+        NEURON_SPACING = 50  # Vertical spacing between neurons
+        BIAS_OFFSET = -50  # Horizontal offset for bias neurons
+
         # Layer names
         layer_names = ["Input Layer"]
         for i in range(1, len(self.layers)):
             layer_names.append(f"Hidden Layer {i}")
         layer_names.append("Output Layer")
-        
+
         # Initialize data structures
         nodes = []
         edges = []
         node_id_map = {}  # Maps (layer_idx, neuron_idx) to node ID
         node_idx = 0
-        
+
         # Find maximum layer size for scaling
-        max_layer_size = max([layer.input_size for layer in self.layers] + [self.layers[-1].output_size])
-        
+        max_layer_size = max(
+            [layer.input_size for layer in self.layers] + [self.layers[-1].output_size]
+        )
+
         # Create nodes for all neurons
         # Input layer (including bias)
         layer_idx = 0
         input_size = self.layers[0].input_size
-        
+
         # Regular input neurons
         for neuron_idx in range(input_size):
             x = layer_idx * GAP_MULTIPLIER
-            y = (neuron_idx - input_size/2) * NEURON_SPACING
-            nodes.append({
-                "id": node_idx,
-                "label": f"L0 N{neuron_idx}",
-                "x": x,
-                "y": y,
-                "size": 15,
-                "color": "lightblue",
-                "layer": "Input Layer",
-                "type": "regular"
-            })
-            node_id_map[(layer_idx, neuron_idx)] = node_idx
-            node_idx += 1
-        
-        # Input layer bias neuron
-        nodes.append({
-            "id": node_idx,
-            "label": "L0 Bias",
-            "x": layer_idx * GAP_MULTIPLIER + BIAS_OFFSET,
-            "y": (input_size/2 + 0.5) * NEURON_SPACING,
-            "size": 15,
-            "color": "pink",
-            "layer": "Input Layer",
-            "type": "bias"
-        })
-        input_bias_id = node_idx
-        node_idx += 1
-        
-        # Hidden and output layers
-        for layer_idx, layer in enumerate(self.layers, start=1):
-            output_size = layer.output_size
-            is_output_layer = (layer_idx == len(self.layers))
-            
-            # Regular neurons
-            for neuron_idx in range(output_size):
-                x = layer_idx * GAP_MULTIPLIER
-                y = (neuron_idx - output_size/2) * NEURON_SPACING
-                nodes.append({
+            y = (neuron_idx - input_size / 2) * NEURON_SPACING
+            nodes.append(
+                {
                     "id": node_idx,
-                    "label": f"L{layer_idx} N{neuron_idx}",
+                    "label": f"L0 N{neuron_idx}",
                     "x": x,
                     "y": y,
                     "size": 15,
-                    "color": "lightyellow" if not is_output_layer else "lightgreen",
-                    "layer": layer_names[layer_idx],
-                    "type": "regular"
-                })
+                    "color": "lightblue",
+                    "layer": "Input Layer",
+                    "type": "regular",
+                }
+            )
+            node_id_map[(layer_idx, neuron_idx)] = node_idx
+            node_idx += 1
+
+        # Input layer bias neuron
+        nodes.append(
+            {
+                "id": node_idx,
+                "label": "L0 Bias",
+                "x": layer_idx * GAP_MULTIPLIER + BIAS_OFFSET,
+                "y": (input_size / 2 + 0.5) * NEURON_SPACING,
+                "size": 15,
+                "color": "pink",
+                "layer": "Input Layer",
+                "type": "bias",
+            }
+        )
+        input_bias_id = node_idx
+        node_idx += 1
+
+        # Hidden and output layers
+        for layer_idx, layer in enumerate(self.layers, start=1):
+            output_size = layer.output_size
+            is_output_layer = layer_idx == len(self.layers)
+
+            # Regular neurons
+            for neuron_idx in range(output_size):
+                x = layer_idx * GAP_MULTIPLIER
+                y = (neuron_idx - output_size / 2) * NEURON_SPACING
+                nodes.append(
+                    {
+                        "id": node_idx,
+                        "label": f"L{layer_idx} N{neuron_idx}",
+                        "x": x,
+                        "y": y,
+                        "size": 15,
+                        "color": "lightyellow" if not is_output_layer else "lightgreen",
+                        "layer": layer_names[layer_idx],
+                        "type": "regular",
+                    }
+                )
                 node_id_map[(layer_idx, neuron_idx)] = node_idx
                 node_idx += 1
-            
+
             # Bias neuron (except for output layer)
             if not is_output_layer:
-                nodes.append({
-                    "id": node_idx,
-                    "label": f"L{layer_idx} Bias",
-                    "x": layer_idx * GAP_MULTIPLIER + BIAS_OFFSET,
-                    "y": (output_size/2 + 0.5) * NEURON_SPACING,
-                    "size": 15,
-                    "color": "pink",
-                    "layer": layer_names[layer_idx],
-                    "type": "bias"
-                })
+                nodes.append(
+                    {
+                        "id": node_idx,
+                        "label": f"L{layer_idx} Bias",
+                        "x": layer_idx * GAP_MULTIPLIER + BIAS_OFFSET,
+                        "y": (output_size / 2 + 0.5) * NEURON_SPACING,
+                        "size": 15,
+                        "color": "pink",
+                        "layer": layer_names[layer_idx],
+                        "type": "bias",
+                    }
+                )
                 node_id_map[(layer_idx, "bias")] = node_idx
                 node_idx += 1
-        
+
         # Create edges between layers
         for l, layer in enumerate(self.layers):
             input_size = layer.input_size
             output_size = layer.output_size
-            
+
             # Get node indices for this layer
             if l == 0:
                 # Input layer nodes
@@ -196,71 +199,84 @@ class FFNN:
                 # Previous layer's nodes
                 input_nodes = [node_id_map[(l, i)] for i in range(input_size)]
                 input_bias = node_id_map.get((l, "bias"), None)
-            
+
             # Next layer's nodes
-            output_nodes = [node_id_map[(l+1, i)] for i in range(output_size)]
-            
+            output_nodes = [node_id_map[(l + 1, i)] for i in range(output_size)]
+
             # Regular connections
             for i, input_node in enumerate(input_nodes):
                 for j, output_node in enumerate(output_nodes):
                     weight = layer.weights[j, i]
-                    gradient = self.weights_grad[l][j, i] if hasattr(self, 'weights_grad') and l < len(self.weights_grad) else 0
-                    
+                    gradient = (
+                        self.weights_grad[l][j, i]
+                        if hasattr(self, "weights_grad") and l < len(self.weights_grad)
+                        else 0
+                    )
+
                     # Edge width based on weight magnitude
                     width = min(max(0.5, abs(weight) * 3), 5)
-                    color = 'rgba(123, 165, 209, 0.8)' if weight >= 0 else 'rgba(217, 123, 106, 0.8)'
-                    
-                    edges.append({
-                        "source": input_node,
-                        "target": output_node,
-                        "weight": weight,
-                        "gradient": gradient,
-                        "width": width,
-                        "color": color,
-                        "type": "regular"
-                    })
-            
+                    color = (
+                        "rgba(123, 165, 209, 0.8)"
+                        if weight >= 0
+                        else "rgba(217, 123, 106, 0.8)"
+                    )
+
+                    edges.append(
+                        {
+                            "source": input_node,
+                            "target": output_node,
+                            "weight": weight,
+                            "gradient": gradient,
+                            "width": width,
+                            "color": color,
+                            "type": "regular",
+                        }
+                    )
+
             # Bias connections
             if input_bias is not None:
                 for j, output_node in enumerate(output_nodes):
                     bias_value = layer.biases[0, j] if layer.biases.size > j else 0
-                    edges.append({
-                        "source": input_bias,
-                        "target": output_node,
-                        "weight": bias_value,
-                        "gradient": self.biases_grad[l][0, j] if hasattr(self, 'biases_grad') and l < len(self.biases_grad) else 0,
-                        "width": 1,
-                        "color": 'rgba(200, 100, 200, 0.8)',
-                        "type": "bias"
-                    })
-        
+                    edges.append(
+                        {
+                            "source": input_bias,
+                            "target": output_node,
+                            "weight": bias_value,
+                            "gradient": (
+                                self.biases_grad[l][0, j]
+                                if hasattr(self, "biases_grad")
+                                and l < len(self.biases_grad)
+                                else 0
+                            ),
+                            "width": 1,
+                            "color": "rgba(200, 100, 200, 0.8)",
+                            "type": "bias",
+                        }
+                    )
+
         # Create node trace
         node_x = [node["x"] for node in nodes]
         node_y = [node["y"] for node in nodes]
         node_text = [f"{node['label']}<br>Layer: {node['layer']}" for node in nodes]
         node_colors = [node["color"] for node in nodes]
-        
+
         node_trace = go.Scatter(
-            x=node_x, 
+            x=node_x,
             y=node_y,
-            mode='markers+text',
-            text=[node['label'] for node in nodes],
-            textposition='top center',
-            hoverinfo='text',
+            mode="markers+text",
+            text=[node["label"] for node in nodes],
+            textposition="top center",
+            hoverinfo="text",
             hovertext=node_text,
-            marker=dict(
-                color=node_colors,
-                size=25,
-                line=dict(width=2, color='black')
-            )
+            marker=dict(color=node_colors, size=25, line=dict(width=2, color="black")),
         )
-        
+
         # Create edge traces
         edge_traces = []
         for edge in edges:
             source_node = nodes[edge["source"]]
             target_node = nodes[edge["target"]]
-            
+
             # Create multiple points along the edge for better hovering
             num_points = 20
             edge_x = []
@@ -269,11 +285,11 @@ class FFNN:
                 ratio = i / (num_points - 1)
                 edge_x.append(source_node["x"] * (1 - ratio) + target_node["x"] * ratio)
                 edge_y.append(source_node["y"] * (1 - ratio) + target_node["y"] * ratio)
-            
+
             # Format weight and gradient
             weight_display = f"{edge['weight']:.4f}"
             gradient_display = f"{edge['gradient']:.6f}"
-            
+
             # Hover text
             hover_text = (
                 f"<b>Connection:</b> {nodes[edge['source']]['label']} → {nodes[edge['target']]['label']}<br>"
@@ -281,61 +297,61 @@ class FFNN:
                 f"<b>Value:</b> {weight_display}<br>"
                 f"<b>Gradient:</b> {gradient_display}"
             )
-            
+
             edge_trace = go.Scatter(
-                x=edge_x, 
+                x=edge_x,
                 y=edge_y,
                 line=dict(width=edge["width"], color=edge["color"]),
-                mode='lines',
-                hoverinfo='text',
+                mode="lines",
+                hoverinfo="text",
                 hovertemplate=hover_text + "<extra></extra>",
                 hoverlabel=dict(
                     bgcolor="white",
                     font_size=12,
                     font_family="Arial",
-                    bordercolor="black"
+                    bordercolor="black",
                 ),
-                opacity=0.7
+                opacity=0.7,
             )
             edge_traces.append(edge_trace)
-        
+
         # Create figure
         fig = go.Figure(
             data=edge_traces + [node_trace],
             layout=go.Layout(
-                title='Neural Network Architecture Visualization',
+                title="Neural Network Architecture Visualization",
                 showlegend=False,
-                hovermode='closest',
+                hovermode="closest",
                 margin=dict(b=20, l=5, r=5, t=40),
                 xaxis=dict(
-                    showgrid=False, 
-                    zeroline=False, 
+                    showgrid=False,
+                    zeroline=False,
                     showticklabels=False,
-                    range=[-100, len(self.layers) * GAP_MULTIPLIER + 100]
+                    range=[-100, len(self.layers) * GAP_MULTIPLIER + 100],
                 ),
                 yaxis=dict(
-                    showgrid=False, 
-                    zeroline=False, 
+                    showgrid=False,
+                    zeroline=False,
                     showticklabels=False,
-                    scaleanchor="x", 
-                    scaleratio=1
+                    scaleanchor="x",
+                    scaleratio=1,
                 ),
                 width=1200,
                 height=800,
-                plot_bgcolor='rgba(240, 240, 240, 0.2)'
-            )
+                plot_bgcolor="rgba(240, 240, 240, 0.2)",
+            ),
         )
-        
+
         # Add layer labels
         for i, name in enumerate(layer_names):
             fig.add_annotation(
                 x=i * GAP_MULTIPLIER,
-                y=(max_layer_size/2 + 1) * NEURON_SPACING,
+                y=(max_layer_size / 2 + 1) * NEURON_SPACING,
                 text=name,
                 showarrow=False,
-                font=dict(size=16, color="black")
+                font=dict(size=16, color="black"),
             )
-        
+
         # Add legend
         fig.add_annotation(
             x=0.02,
@@ -343,30 +359,32 @@ class FFNN:
             xref="paper",
             yref="paper",
             text="<b>Legend:</b><br>"
-                "• Blue edges: Positive weights<br>"
-                "• Red edges: Negative weights<br>"
-                "• Purple edges: Bias connections<br>"
-                "• Thickness indicates weight magnitude",
+            "• Blue edges: Positive weights<br>"
+            "• Red edges: Negative weights<br>"
+            "• Purple edges: Bias connections<br>"
+            "• Thickness indicates weight magnitude",
             showarrow=False,
             font=dict(size=12),
             bgcolor="rgba(255, 255, 255, 0.7)",
             bordercolor="gray",
             borderwidth=1,
             borderpad=4,
-            align="left"
+            align="left",
         )
-        
-        fig.show(config={
-            'displayModeBar': True,
-            'scrollZoom': True,
-            'toImageButtonOptions': {
-                'format': 'png',
-                'filename': 'neural_network_visualization',
-                'height': 800,
-                'width': 1200,
-                'scale': 2
+
+        fig.show(
+            config={
+                "displayModeBar": True,
+                "scrollZoom": True,
+                "toImageButtonOptions": {
+                    "format": "png",
+                    "filename": "neural_network_visualization",
+                    "height": 800,
+                    "width": 1200,
+                    "scale": 2,
+                },
             }
-        })
+        )
 
     def plot_weights(self, layers: list[int]):
         for layer_number in layers:
@@ -517,9 +535,6 @@ class FFNN:
             )
             delta = loss_derivative * activation_derivative
 
-        # Clip gradients to prevent exploding gradients
-        delta = np.clip(delta, -1, 1)
-
         iteration_weights_grad = []
         iteration_biases_grad = []
 
@@ -530,10 +545,8 @@ class FFNN:
 
             # Compute gradients
             grad_weights = np.dot(a_prev.T, delta)
-            grad_weights = np.clip(grad_weights, -1, 1)
 
             grad_biases = np.sum(delta, axis=0, keepdims=True)
-            grad_biases = np.clip(grad_biases, -1, 1)
 
             # Update parameters
             layer.old_weights = layer.weights.copy()
@@ -550,7 +563,6 @@ class FFNN:
                     self.layers[i - 1].z
                 )
                 delta *= prev_activation_derivative
-                delta = np.clip(delta, -1, 1)
 
         return iteration_weights_grad, iteration_biases_grad
 
