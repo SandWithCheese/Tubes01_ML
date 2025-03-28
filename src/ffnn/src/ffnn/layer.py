@@ -24,9 +24,3 @@ class Layer:
         self.output_value = []
         self.input_value = []
         self.z = []
-
-        print(f"Layer initialized: {input_size} -> {output_size}")
-        print(f"Activation: {activation}")
-        print(f"Weights setup: {weights_setup}")
-        print(f"Weight initializer: {self.weight_initializer.get_initializer_type()}")
-        print()

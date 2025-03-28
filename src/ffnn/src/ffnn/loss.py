@@ -23,7 +23,6 @@ class Loss:
         def get_loss_type(self):
             return LossFunction.MEAN_SQUARED_ERROR
 
-    # TODO: Cek lagi kedua class di bawah
     class BinaryCrossEntropy:
         def calculate(self, y_true, y_pred):
             epsilon = 1e-15
@@ -45,7 +44,6 @@ class Loss:
             y_pred = np.clip(y_pred, epsilon, 1.0)
             n_samples = y_pred.shape[0]
 
-            # Handle both one-hot encoded and class indices formats
             if y_true.ndim == 1:
                 # Class indices format
                 return -np.sum(np.log(y_pred[np.arange(n_samples), y_true])) / n_samples
@@ -68,7 +66,7 @@ class Loss:
                 return (y_pred - y_true) / n_samples
             else:
                 raise ValueError(
-                    "y_true must be either 1D (class indices) or 2D (one-hot encoded)"
+                    "y_true must be either class indices or 2D one-hot encoded"
                 )
 
         def get_loss_type(self):

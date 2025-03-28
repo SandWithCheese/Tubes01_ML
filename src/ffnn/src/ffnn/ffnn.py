@@ -17,19 +17,19 @@ class FFNN:
         activation_functions: list[ActivationFunction] = None,
         loss_function: LossFunction = LossFunction.MEAN_SQUARED_ERROR,
         weights_setup: list[WeightsSetup] = None,
-        learning_rate: float = 0.01,
-        batch_size: int = 32,
+        learning_rate: float = 0.0001,
+        batch_size: int = 256,
         epochs: int = 100,
         verbose: bool = False,
         random_state: int = None,
-        l1_lambda: float = 0.0,
-        l2_lambda: float = 0.0,
     ):
         if activation_functions is None:
-            activation_functions = [ActivationFunction.RELU] * (len(layer_sizes) - 1)
+            activation_functions = [ActivationFunction.RELU] * (
+                len(layer_sizes) - 2
+            ) + [ActivationFunction.SOFTMAX]
 
         if weights_setup is None:
-            weights_setup = [WeightsSetup(WeightInitializer.ZERO)] * (
+            weights_setup = [WeightsSetup(WeightInitializer.XAVIER)] * (
                 len(layer_sizes) - 1
             )
 
@@ -76,23 +76,10 @@ class FFNN:
         self.epochs = epochs
         self.verbose = verbose
         self.random_state = random_state
-        self.l1_lambda = l1_lambda
-        self.l2_lambda = l2_lambda
-        self.train_losses = []    
+        self.train_losses = []
         self.val_losses = []
         self.weights_grad = []
         self.biases_grad = []
-
-        print("FFNN initialized")
-        print("Layer sizes:", layer_sizes)
-        print("Activation functions:", activation_functions)
-        print("Loss function:", loss_function)
-        print("Weights setup:", weights_setup)
-        print("Learning rate:", learning_rate)
-        print("Batch size:", batch_size)
-        print("Epochs:", epochs)
-        print("Verbose:", verbose)
-        print("Random state:", random_state)
 
     def show_graph(self):
         # Placeholder for visualization logic
@@ -117,7 +104,6 @@ class FFNN:
             plt.title(f"Distribution of biases in the {layer_number}-th layer")
             plt.show()
 
-
     def plot_gradients(self, layers: list[int]):
         for layer_number in layers:
 
@@ -126,7 +112,9 @@ class FFNN:
             sns.histplot(data, bins=10, kde=True)
             plt.xlabel("Weight gradient")
             plt.ylabel("Frequency")
-            plt.title(f"Distribution of weights gradients in the {layer_number}-th layer")
+            plt.title(
+                f"Distribution of weights gradients in the {layer_number}-th layer"
+            )
             plt.show()
 
             data = self.biases_grad[layer_number].flatten()
@@ -136,17 +124,13 @@ class FFNN:
             plt.ylabel("Frequency")
             plt.title(f"Distribution of bias gradients in the {layer_number}-th layer")
             plt.show()
-    
+
     def plot_loss_curve(self):
         plt.figure(figsize=(10, 6))
-        plt.plot(self.train_losses, label='Training Loss')
-        plt.title('Loss Function Value over Epochs')
-        plt.xlabel('Epoch')
-        plt.ylabel('Loss')
-        # plt.yscale('log')  # Log scale to better visualize loss changes
-        max_loss = max(self.train_losses)
-        y_ticks = list(range(0, int(max_loss) + 3, 30))
-        plt.yticks(y_ticks)
+        plt.plot(self.train_losses, label="Training Loss")
+        plt.title("Loss Function Value over Epochs")
+        plt.xlabel("Epoch")
+        plt.ylabel("Loss")
         plt.legend()
         plt.grid(True, which="both", ls="-", alpha=0.5)
         plt.tight_layout()
@@ -154,14 +138,10 @@ class FFNN:
 
         # val loss
         plt.figure(figsize=(10, 6))
-        plt.plot(self.val_losses, label='Validation Loss')
-        plt.title('Loss Function Value over Epochs')
-        plt.xlabel('Epoch')
-        plt.ylabel('Loss')
-        # plt.yscale('log')  # Log scale to better visualize loss changes
-        max_loss = max(self.val_losses)
-        y_ticks = list(range(0, int(max_loss) + 3, 2))
-        plt.yticks(y_ticks)
+        plt.plot(self.val_losses, label="Validation Loss")
+        plt.title("Loss Function Value over Epochs")
+        plt.xlabel("Epoch")
+        plt.ylabel("Loss")
         plt.legend()
         plt.grid(True, which="both", ls="-", alpha=0.5)
         plt.tight_layout()
@@ -176,10 +156,14 @@ class FFNN:
         with open(path, "rb") as f:
             return pickle.load(f)
 
-    def fit(self, X, Y, validation_ratio = 0.2):
+    def fit(self, X, Y, validation_ratio=0.2):
         np.random.seed(self.random_state)
 
-        epoch_range = tqdm(range(self.epochs), desc="Training...") if self.verbose else range(self.epochs)
+        epoch_range = (
+            tqdm(range(self.epochs), desc="Training...")
+            if self.verbose
+            else range(self.epochs)
+        )
 
         for epoch in epoch_range:
             indices = np.random.permutation(len(X))
@@ -188,7 +172,7 @@ class FFNN:
             split_idx = int(len(X) * (1 - validation_ratio))
             X_train, X_val = X_shuffled[:split_idx], X_shuffled[split_idx:]
             Y_train, Y_val = Y_shuffled[:split_idx], Y_shuffled[split_idx:]
-            
+
             this_epoch_loss = []
 
             for i in range(0, len(X_train), self.batch_size):
@@ -201,12 +185,12 @@ class FFNN:
                 # Compute loss
                 y_pred = self.layers[-1].output_value
                 loss = self.loss_function.calculate(Y_batch, y_pred)
-                
+
                 this_epoch_loss.append(loss)
 
                 # Backward pass
                 iteration_weights_grad, iteration_biases_grad = self.backward(Y_batch)
-                
+
                 if i == 0:
                     self.weights_grad = iteration_weights_grad
                     self.biases_grad = iteration_biases_grad
@@ -214,19 +198,16 @@ class FFNN:
                     self.weights_grad += iteration_weights_grad
                     self.biases_grad += iteration_biases_grad
 
-
-                # if self.verbose and (i // self.batch_size) % 10 == 0:
-                #     print(
-                #         f"Epoch {epoch + 1}, Batch {i//self.batch_size}, Loss: {loss}"
-                #     )
-
             # Only take the sum loss of the epoch for plotting
-            self.train_losses.append(np.sum(this_epoch_loss))
-            self.val_losses.append(np.sum(self.loss_function.calculate(Y_val,self.forward(X_val))))
+            self.train_losses.append(np.average(this_epoch_loss))
+            self.val_losses.append(
+                np.average(self.loss_function.calculate(Y_val, self.forward(X_val)))
+            )
 
             if self.verbose:
-                print(f"Epoch {epoch + 1} - Training Loss: {self.train_losses[-1]}, Validation Loss: {self.val_losses[-1]}")
-
+                print(
+                    f"Epoch {epoch + 1} - Training Loss: {self.train_losses[-1]}, Validation Loss: {self.val_losses[-1]}"
+                )
 
     def forward(self, X):
         a = X
@@ -245,7 +226,6 @@ class FFNN:
         if isinstance(self.loss_function, Loss.CategoricalCrossEntropy) and isinstance(
             self.layers[-1].activation, Activation.Softmax
         ):
-            # delta = self.loss_function.derivative(Y, y_pred)
             delta = y_pred - Y
         else:
             loss_derivative = self.loss_function.derivative(Y, y_pred)
@@ -269,21 +249,15 @@ class FFNN:
             grad_weights = np.dot(a_prev.T, delta)
             grad_weights = np.clip(grad_weights, -1, 1)
 
-            # Add L1 regularization (sign(weights))
-            grad_weights += self.l1_lambda * np.sign(layer.weights)
-
-            # Add L2 regularization (weights)
-            grad_weights += self.l2_lambda * layer.weights
-
             grad_biases = np.sum(delta, axis=0, keepdims=True)
             grad_biases = np.clip(grad_biases, -1, 1)
 
             # Update parameters
             layer.old_weights = layer.weights.copy()
-            iteration_weights_grad.insert(0,grad_weights.copy())
+            iteration_weights_grad.insert(0, grad_weights.copy())
             layer.weights -= self.learning_rate * grad_weights
             layer.old_biases = layer.biases.copy()
-            iteration_biases_grad.insert(0,grad_biases.copy())
+            iteration_biases_grad.insert(0, grad_biases.copy())
             layer.biases -= self.learning_rate * grad_biases
 
             # Propagate delta to previous layer
