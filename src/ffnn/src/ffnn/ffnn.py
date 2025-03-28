@@ -76,6 +76,7 @@ class FFNN:
         self.random_state = random_state
         self.l1_lambda = l1_lambda
         self.l2_lambda = l2_lambda
+        self.losses = []    # Store loss values for plotting
 
         print("FFNN initialized")
         print("Layer sizes:", layer_sizes)
@@ -103,8 +104,8 @@ class FFNN:
     def plot_loss_curve(self):
         plt.figure(figsize=(10, 6))
         plt.plot(self.losses, label='Training Loss')
-        plt.title('Loss Function Value over Iterations')
-        plt.xlabel('Iteration')
+        plt.title('Loss Function Value over Epochs')
+        plt.xlabel('Epoch')
         plt.ylabel('Loss')
         # plt.yscale('log')  # Log scale to better visualize loss changes
         max_loss = max(self.losses)
@@ -130,6 +131,8 @@ class FFNN:
             indices = np.random.permutation(len(X))
             X_shuffled = X[indices]
             Y_shuffled = Y[indices]
+            
+            this_epoch_loss = []
 
             for i in range(0, len(X), self.batch_size):
                 X_batch = X_shuffled[i : i + self.batch_size]
@@ -141,14 +144,22 @@ class FFNN:
                 # Compute loss
                 y_pred = self.layers[-1].output_value
                 loss = self.loss_function.calculate(Y_batch, y_pred)
+                
+                # Get first loss, just for the first time
+                if len(self.losses) == 0:
+                    self.losses.append(loss)
+                
+                this_epoch_loss.append(loss)
 
                 # Backward pass
                 self.backward(Y_batch)
 
-                if self.verbose and (i // self.batch_size) % 10 == 0:
-                    print(
-                        f"Epoch {epoch + 1}, Batch {i//self.batch_size}, Loss: {loss}"
-                    )
+                # if self.verbose and (i // self.batch_size) % 10 == 0:
+                #     print(
+                #         f"Epoch {epoch + 1}, Batch {i//self.batch_size}, Loss: {loss}"
+                #     )
+            # Only take the average loss of the epoch for plotting
+            self.losses.append(np.mean(this_epoch_loss))
 
     def forward(self, X):
         a = X
