@@ -7,6 +7,7 @@ from random import randint
 import numpy as np
 import pickle
 import matplotlib.pyplot as plt
+import seaborn as sns
 
 
 class FFNN:
@@ -79,6 +80,8 @@ class FFNN:
         self.l2_lambda = l2_lambda
         self.train_losses = []    
         self.val_losses = []
+        self.weights_grad = []
+        self.biases_grad = []
 
         print("FFNN initialized")
         print("Layer sizes:", layer_sizes)
@@ -96,12 +99,43 @@ class FFNN:
         pass
 
     def plot_weights(self, layers: list[int]):
-        # Placeholder for weights plotting
-        pass
+        for layer_number in layers:
+            data = self.layers[layer_number].weights.flatten()
+            bias_data = self.layers[layer_number].biases.flatten()
+
+            plt.figure(figsize=(8, 6))
+            sns.histplot(data, bins=10, kde=True)
+            plt.xlabel("Weight value")
+            plt.ylabel("Frequency")
+            plt.title(f"Distribution of weights in the {layer_number}-th layer")
+            plt.show()
+
+            plt.figure(figsize=(8, 6))
+            sns.histplot(bias_data, bins=10, kde=True, color="red")
+            plt.xlabel("Bias value")
+            plt.ylabel("Frequency")
+            plt.title(f"Distribution of biases in the {layer_number}-th layer")
+            plt.show()
+
 
     def plot_gradients(self, layers: list[int]):
-        # Placeholder for gradients plotting
-        pass
+        for layer_number in layers:
+
+            data = self.weights_grad[layer_number].flatten()
+            plt.figure(figsize=(8, 6))
+            sns.histplot(data, bins=10, kde=True)
+            plt.xlabel("Weight gradient")
+            plt.ylabel("Frequency")
+            plt.title(f"Distribution of weights gradients in the {layer_number}-th layer")
+            plt.show()
+
+            data = self.biases_grad[layer_number].flatten()
+            plt.figure(figsize=(8, 6))
+            sns.histplot(data, bins=10, kde=True, color="red")
+            plt.xlabel("Bias gradient")
+            plt.ylabel("Frequency")
+            plt.title(f"Distribution of bias gradients in the {layer_number}-th layer")
+            plt.show()
     
     def plot_loss_curve(self):
         plt.figure(figsize=(10, 6))
@@ -111,7 +145,7 @@ class FFNN:
         plt.ylabel('Loss')
         # plt.yscale('log')  # Log scale to better visualize loss changes
         max_loss = max(self.train_losses)
-        y_ticks = list(range(0, int(max_loss) + 3, 2))
+        y_ticks = list(range(0, int(max_loss) + 3, 30))
         plt.yticks(y_ticks)
         plt.legend()
         plt.grid(True, which="both", ls="-", alpha=0.5)
@@ -171,7 +205,15 @@ class FFNN:
                 this_epoch_loss.append(loss)
 
                 # Backward pass
-                self.backward(Y_batch)
+                iteration_weights_grad, iteration_biases_grad = self.backward(Y_batch)
+                
+                if i == 0:
+                    self.weights_grad = iteration_weights_grad
+                    self.biases_grad = iteration_biases_grad
+                else:
+                    self.weights_grad += iteration_weights_grad
+                    self.biases_grad += iteration_biases_grad
+
 
                 # if self.verbose and (i // self.batch_size) % 10 == 0:
                 #     print(
@@ -215,6 +257,9 @@ class FFNN:
         # Clip gradients to prevent exploding gradients
         delta = np.clip(delta, -1, 1)
 
+        iteration_weights_grad = []
+        iteration_biases_grad = []
+
         # Backpropagate through layers
         for i in reversed(range(len(self.layers))):
             layer = self.layers[i]
@@ -235,8 +280,10 @@ class FFNN:
 
             # Update parameters
             layer.old_weights = layer.weights.copy()
+            iteration_weights_grad.insert(0,grad_weights.copy())
             layer.weights -= self.learning_rate * grad_weights
             layer.old_biases = layer.biases.copy()
+            iteration_biases_grad.insert(0,grad_biases.copy())
             layer.biases -= self.learning_rate * grad_biases
 
             # Propagate delta to previous layer
@@ -247,6 +294,8 @@ class FFNN:
                 )
                 delta *= prev_activation_derivative
                 delta = np.clip(delta, -1, 1)
+
+        return iteration_weights_grad, iteration_biases_grad
 
     def predict(self, X):
         return self.forward(X)
