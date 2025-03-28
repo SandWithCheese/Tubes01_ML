@@ -1,3 +1,4 @@
+from tqdm.auto import tqdm
 from ffnn.layer import Layer
 from ffnn.types import ActivationFunction, LossFunction, WeightsSetup, WeightInitializer
 from ffnn.activation import Activation
@@ -76,7 +77,8 @@ class FFNN:
         self.random_state = random_state
         self.l1_lambda = l1_lambda
         self.l2_lambda = l2_lambda
-        self.losses = []    # Store loss values for plotting
+        self.train_losses = []    
+        self.val_losses = []
 
         print("FFNN initialized")
         print("Layer sizes:", layer_sizes)
@@ -103,12 +105,27 @@ class FFNN:
     
     def plot_loss_curve(self):
         plt.figure(figsize=(10, 6))
-        plt.plot(self.losses, label='Training Loss')
-        plt.title('Loss Function Value (AVG) over Epochs')
+        plt.plot(self.train_losses, label='Training Loss')
+        plt.title('Loss Function Value over Epochs')
         plt.xlabel('Epoch')
         plt.ylabel('Loss')
         # plt.yscale('log')  # Log scale to better visualize loss changes
-        max_loss = max(self.losses)
+        max_loss = max(self.train_losses)
+        y_ticks = list(range(0, int(max_loss) + 3, 2))
+        plt.yticks(y_ticks)
+        plt.legend()
+        plt.grid(True, which="both", ls="-", alpha=0.5)
+        plt.tight_layout()
+        plt.show()
+
+        # val loss
+        plt.figure(figsize=(10, 6))
+        plt.plot(self.val_losses, label='Validation Loss')
+        plt.title('Loss Function Value over Epochs')
+        plt.xlabel('Epoch')
+        plt.ylabel('Loss')
+        # plt.yscale('log')  # Log scale to better visualize loss changes
+        max_loss = max(self.val_losses)
         y_ticks = list(range(0, int(max_loss) + 3, 2))
         plt.yticks(y_ticks)
         plt.legend()
@@ -125,18 +142,24 @@ class FFNN:
         with open(path, "rb") as f:
             return pickle.load(f)
 
-    def fit(self, X, Y):
+    def fit(self, X, Y, validation_ratio = 0.2):
         np.random.seed(self.random_state)
-        for epoch in range(self.epochs):
+
+        epoch_range = tqdm(range(self.epochs), desc="Training...") if self.verbose else range(self.epochs)
+
+        for epoch in epoch_range:
             indices = np.random.permutation(len(X))
             X_shuffled = X[indices]
             Y_shuffled = Y[indices]
+            split_idx = int(len(X) * (1 - validation_ratio))
+            X_train, X_val = X_shuffled[:split_idx], X_shuffled[split_idx:]
+            Y_train, Y_val = Y_shuffled[:split_idx], Y_shuffled[split_idx:]
             
             this_epoch_loss = []
 
-            for i in range(0, len(X), self.batch_size):
-                X_batch = X_shuffled[i : i + self.batch_size]
-                Y_batch = Y_shuffled[i : i + self.batch_size]
+            for i in range(0, len(X_train), self.batch_size):
+                X_batch = X_train[i : i + self.batch_size]
+                Y_batch = Y_train[i : i + self.batch_size]
 
                 # Forward pass
                 self.forward(X_batch)
@@ -144,10 +167,6 @@ class FFNN:
                 # Compute loss
                 y_pred = self.layers[-1].output_value
                 loss = self.loss_function.calculate(Y_batch, y_pred)
-                
-                # Get first loss, just for the first time
-                if len(self.losses) == 0:
-                    self.losses.append(loss)
                 
                 this_epoch_loss.append(loss)
 
@@ -158,8 +177,14 @@ class FFNN:
                 #     print(
                 #         f"Epoch {epoch + 1}, Batch {i//self.batch_size}, Loss: {loss}"
                 #     )
-            # Only take the average loss of the epoch for plotting
-            self.losses.append(np.mean(this_epoch_loss))
+
+            # Only take the sum loss of the epoch for plotting
+            self.train_losses.append(np.sum(this_epoch_loss))
+            self.val_losses.append(np.sum(self.loss_function.calculate(Y_val,self.forward(X_val))))
+
+            if self.verbose:
+                print(f"Epoch {epoch + 1} - Training Loss: {self.train_losses[-1]}, Validation Loss: {self.val_losses[-1]}")
+
 
     def forward(self, X):
         a = X
