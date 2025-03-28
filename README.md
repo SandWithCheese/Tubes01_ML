@@ -2,7 +2,7 @@
 
 ## Deskripsi
 
-README.md, yang berisi deskripsi singkat repository, cara setup dan run program, dan pembagian tugas tiap anggota kelompok.
+Tugas Besar 1 IF3270 Pembelajaran Mesin ini bertujuan untuk mengimplementasikan Feed Forward Neural Network (FFNN) dalam menyelesaikan permasalahan klasifikasi. Proyek ini menggunakan dataset MNIST, yang terdiri dari gambar angka tulisan tangan dari 0 hingga 9, untuk melatih dan menguji model. Feed Forward Neural Network (FFNN) adalah salah satu jenis artificial neural network yang sering digunakan dalam berbagai aplikasi pembelajaran mesin. Dalam proyek ini, kami mengimplementasikan konsep dasar FFNN, termasuk arsitektur, fungsi aktivasi, dan backpropagation.
 
 ## Cara Setup dan Run Program
 
@@ -31,18 +31,12 @@ README.md, yang berisi deskripsi singkat repository, cara setup dan run program,
     pip install -e .
     ```
 
-    Catatan: Jika membuat perubahan pada package, jalankan perintah berikut untuk menginstall ulang package
-
-    ```bash
-    pip install -e . --upgrade
-    ```
-
 5. Program sudah siap dijalankan dan dapat dilakukan development
 
 ## Anggota Kelompok
 
-| Nama                        | NIM      |
-|-----------------------------|----------|
-| Ahmad Naufal Ramadan        | 13522005 |
-| Yusuf Ardian Sandi          | 13522015 |
-| Rayendra Althaf Taraka Noor | 13522107 |
+| Nama                        | NIM      | Pembagian Tugas                                                                                                                                        |
+|-----------------------------|----------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Ahmad Naufal Ramadan        | 13522005 | Inisialisasi struktur proyek, implementasi fungsi aktivasi dan fungsi loss beserta turunannya, membantu implementasi forward dan backward              |
+| Yusuf Ardian Sandi          | 13522015 | Implementasi visualisasi neural network dengan graph, membantu implementasi forward pada FFNN class, implementasi grafik penurunan loss terhadap epoch |
+| Rayendra Althaf Taraka Noor | 13522107 | Implementasi visualisasi distribusi weights dan loss, membantu  implementasi backward, penjelasan implementasi dalam laporan                           |
