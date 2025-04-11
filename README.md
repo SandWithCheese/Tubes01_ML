@@ -37,6 +37,6 @@ Tugas Besar 1 IF3270 Pembelajaran Mesin ini bertujuan untuk mengimplementasikan 
 
 | Nama                        | NIM      | Pembagian Tugas                                                                                                                                        |
 |-----------------------------|----------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Ahmad Naufal Ramadan        | 13522005 | Inisialisasi struktur proyek, implementasi fungsi aktivasi dan fungsi loss beserta turunannya, membantu implementasi forward dan backward              |
+| Ahmad Naufal Ramadan        | 13522005 | Inisialisasi struktur proyek, implementasi fungsi aktivasi dan fungsi loss beserta turunannya, membantu implementasi forward dan backward, implementasi L1 dan L2 regularization              |
 | Yusuf Ardian Sandi          | 13522015 | Implementasi visualisasi neural network dengan graph, membantu implementasi forward pada FFNN class, implementasi grafik penurunan loss terhadap epoch |
 | Rayendra Althaf Taraka Noor | 13522107 | Implementasi visualisasi distribusi weights dan loss, membantu  implementasi backward, penjelasan implementasi dalam laporan                           |
