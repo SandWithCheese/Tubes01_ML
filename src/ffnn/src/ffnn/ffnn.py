@@ -23,6 +23,8 @@ class FFNN:
         epochs: int = 100,
         verbose: bool = False,
         random_state: int = None,
+        l1: float = 0,
+        l2: float = 0,
     ):
         if activation_functions is None:
             activation_functions = [ActivationFunction.RELU] * (
@@ -57,6 +59,10 @@ class FFNN:
             for activation_function in activation_functions
         ), "Invalid activation function"
 
+        assert l1 >= 0, "L1 regularization must be non-negative"
+
+        assert l2 >= 0, "L2 regularization must be non-negative"
+
         for i in range(len(weights_setup)):
             weights_setup[i].seed = random_state
 
@@ -77,6 +83,8 @@ class FFNN:
         self.epochs = epochs
         self.verbose = verbose
         self.random_state = random_state
+        self.l1 = l1
+        self.l2 = l2
         self.train_losses = []
         self.val_losses = []
         self.weights_grad = []
@@ -485,7 +493,7 @@ class FFNN:
 
                 # Compute loss
                 y_pred = self.layers[-1].output_value
-                loss = self.loss_function.calculate(Y_batch, y_pred)
+                loss = self.calculate_loss(Y_batch, y_pred)
 
                 this_epoch_loss.append(loss)
 
@@ -509,6 +517,22 @@ class FFNN:
                 print(
                     f"Epoch {epoch + 1} - Training Loss: {self.train_losses[-1]}, Validation Loss: {self.val_losses[-1]}"
                 )
+
+    def calculate_loss(self, Y, y_pred):
+        base_loss = self.loss_function.calculate(Y, y_pred)
+
+        l1_penalty = 0
+        l2_penalty = 0
+        if self.l1 > 0 or self.l2 > 0:
+            for layer in self.layers:
+                if self.l1 > 0:
+                    l1_penalty += np.sum(np.abs(layer.weights))
+                if self.l2 > 0:
+                    l2_penalty += np.sum(np.square(layer.weights))
+        
+        total_loss = base_loss + self.l1 * l1_penalty + self.l2 * l2_penalty / 2
+        
+        return total_loss
 
     def forward(self, X):
         a = X
@@ -545,8 +569,16 @@ class FFNN:
 
             # Compute gradients
             grad_weights = np.dot(a_prev.T, delta)
+            grad_weights = np.clip(grad_weights, -1, 1)
+
+            if self.l1 > 0:
+                grad_weights += self.l1 * np.sign(layer.weights)
+
+            if self.l2 > 0:
+                grad_weights += self.l2 * layer.weights
 
             grad_biases = np.sum(delta, axis=0, keepdims=True)
+            grad_biases = np.clip(grad_biases, -1, 1)
 
             # Update parameters
             layer.old_weights = layer.weights.copy()
@@ -563,6 +595,7 @@ class FFNN:
                     self.layers[i - 1].z
                 )
                 delta *= prev_activation_derivative
+                delta = np.clip(delta, -1, 1)
 
         return iteration_weights_grad, iteration_biases_grad
 
